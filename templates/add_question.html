@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Arena | Admin Add Question</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            overflow-y: auto;
+            display: block;
+            height: auto;
+        }
+
+        .admin-nav {
+            margin-bottom: 40px;
+        }
+
+        .admin-container {
+            max-width: 800px;
+            margin: 0 auto 60px auto;
+            padding: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            font-size: 0.95rem;
+            transition: 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .section-title {
+            margin-top: 40px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .test-case-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .test-case-row>div {
+            flex: 1;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 1.1rem;
+            margin-top: 40px;
+            justify-content: center;
+        }
+
+        .success-banner {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <nav class="navbar admin-nav">
+        <div class="logo">
+            <i class="fa-solid fa-code"></i> Code Arena <span class="badge"
+                style="background:var(--danger-color)">ADMIN</span>
+        </div>
+        <div class="nav-links" style="display: flex; gap: 12px; align-items: center;">
+            <a href="/" class="btn btn-secondary" style="text-decoration:none;"><i class="fa-solid fa-arrow-left"></i>
+                Back to Platform</a>
+            <a href="/logout" class="btn btn-secondary"
+                style="text-decoration:none; padding: 6px 12px; height: 32px; font-size: 0.85rem;"><i
+                    class="fa-solid fa-right-from-bracket"></i> Logout</a>
+        </div>
+    </nav>
+
+    <div class="admin-container glass-card">
+        {% if success %}
+        <div class="success-banner">
+            <i class="fa-solid fa-circle-check" style="font-size: 1.2rem;"></i>
+            Question and Test Cases successfully added to database!
+        </div>
+        {% endif %}
+
+        <h1 style="margin-bottom: 8px;"><i class="fa-solid fa-folder-plus"></i> Add New Coding Question</h1>
+        <p style="color: var(--text-secondary); margin-bottom: 32px;">Fill out this specific form to insert a new
+            question directly into your active SQLite database.</p>
+
+        <form action="/add-question" method="POST">
+            <h3 class="section-title"><i class="fa-solid fa-circle-info"></i> Question Details</h3>
+            <div class="form-group">
+                <label>Question Title *</label>
+                <input type="text" name="title" class="form-control" required placeholder="e.g., Two Sum">
+            </div>
+            <div class="form-group">
+                <label>Problem Description *</label>
+                <textarea name="description" class="form-control" required
+                    placeholder="Enter the problem statement, constraints, etc..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Difficulty Level *</label>
+                <select name="difficulty" class="form-control" required>
+                    <option value="Easy">Easy</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="Hard">Hard</option>
+                </select>
+            </div>
+
+            <h3 class="section-title"><i class="fa-solid fa-vial"></i> Sample Test Cases (2)</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.9rem;">Visible outputs that
+                display dynamically onto the User Interface.</p>
+
+            {% for i in range(1, 3) %}
+            <div class="test-case-row">
+                <div>
+                    <label>Sample Input {{i}} *</label>
+                    <input type="text" name="sample_in_{{i}}" class="form-control" required placeholder="Input...">
+                </div>
+                <div>
+                    <label>Sample Output {{i}} *</label>
+                    <input type="text" name="sample_out_{{i}}" class="form-control" required placeholder="Output...">
+                </div>
+            </div>
+            {% endfor %}
+
+            <h3 class="section-title"><i class="fa-solid fa-lock"></i> Hidden Test Cases (5)</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 0.9rem;">Blind data tested against
+                user's code execution.</p>
+
+            {% for i in range(1, 6) %}
+            <div class="test-case-row">
+                <div>
+                    <label>Hidden Input {{i}} *</label>
+                    <input type="text" name="hidden_in_{{i}}" class="form-control" required placeholder="Input...">
+                </div>
+                <div>
+                    <label>Hidden Output {{i}} *</label>
+                    <input type="text" name="hidden_out_{{i}}" class="form-control" required placeholder="Output...">
+                </div>
+            </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-primary submit-btn"><i class="fa-solid fa-floppy-disk"></i> Submit &
+                Save to Database</button>
+        </form>
+    </div>
+</body>
+
+</html>

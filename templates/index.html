@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Arena | Pro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="dark-theme">
+    <nav class="navbar">
+        <div class="logo">
+            <i class="fa-solid fa-code"></i> Code Arena <span class="badge">PRO</span>
+        </div>
+        <div class="nav-links" style="display: flex; gap: 12px; align-items: center;">
+            <button class="theme-toggle" id="themeToggle">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+            <div class="avatar" style="font-size: 0.9rem; font-weight: 500;"><i class="fa-solid fa-user"></i> {{
+                session.get('username') }}</div>
+            <a href="/logout" class="btn btn-secondary"
+                style="text-decoration:none; padding: 6px 12px; height: 32px; font-size: 0.85rem;"><i
+                    class="fa-solid fa-right-from-bracket"></i> Logout</a>
+        </div>
+    </nav>
+
+    <div class="layout">
+        <!-- Left Panel: Question -->
+        <div class="panel left-panel">
+            <div class="panel-header">
+                <h2><i class="fa-solid fa-book-open"></i> Problem Description</h2>
+                <span class="difficulty easy" id="difficultyBadge">Easy</span>
+            </div>
+
+            <div class="panel-content glass-card">
+                <h1 id="questionTitle" class="question-title">Loading...</h1>
+                <div id="questionDescription" class="question-desc">
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-text"></div>
+                    <div class="skeleton-text short"></div>
+                </div>
+
+                <div class="test-cases-section">
+                    <h3><i class="fa-solid fa-vial"></i> Sample Test Cases</h3>
+                    <div id="sampleTestCases" class="sample-container">
+                        <!-- Samples injected here -->
+                    </div>
+
+                    <div class="hidden-cases-badge">
+                        <i class="fa-solid fa-lock"></i>
+                        <span id="hiddenCasesLabel">Hidden Test Cases (0 cases)</span>
+                    </div>
+
+                    <!-- NEW LOCATION: Test Results -->
+                    <div class="test-results-section" id="testResultsSection" style="display: none; margin-top: 24px;">
+                        <h3><i class="fa-solid fa-square-poll-vertical"></i> Test Results</h3>
+                        <div id="resultsContainer" class="results-console"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="resizer" id="dragMe"></div>
+
+        <!-- Right Panel: Code Editor -->
+        <div class="panel right-panel">
+            <div class="editor-header">
+                <div class="lang-selector">
+                    <i class="fa-brands fa-python"></i> Python 3
+                </div>
+                <div class="editor-actions">
+                    <button id="resetCodeBtn" class="btn btn-icon" title="Reset Code"><i
+                            class="fa-solid fa-rotate-right"></i></button>
+                </div>
+            </div>
+
+            <div class="editor-container" id="editorContainer"></div>
+
+            <!-- Terminal Area -->
+            <div class="terminal-area glass-card">
+                <div class="terminal-tabs">
+                    <button class="tab active" data-tab="custom-in"><i class="fa-solid fa-keyboard"></i> Custom
+                        Input</button>
+                    <button class="tab" data-tab="custom-out" id="tabOutput"><i class="fa-solid fa-terminal"></i>
+                        Output</button>
+                </div>
+
+                <div class="tab-content active" id="custom-in">
+                    <textarea id="customInput" placeholder="Enter custom input here..." spellcheck="false"></textarea>
+                </div>
+
+                <div class="tab-content" id="custom-out">
+                    <div id="outputDisplay" class="output-console"><span class="placeholder">Run your code to see
+                            output...</span></div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" id="runBtn">
+                        <i class="fa-solid fa-play"></i> Run Code
+                    </button>
+                    <button class="btn btn-primary" id="submitBtn">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Submit
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monaco Editor Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
+    <script>
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' } });
+        window.MonacoEnvironment = { getWorkerUrl: () => proxy };
+        let proxy = URL.createObjectURL(new Blob([`
+            self.MonacoEnvironment = {
+                baseUrl: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/'
+            };
+            importScripts('https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs/base/worker/workerMain.js');
+        `], { type: 'text/javascript' }));
+
+        require(["vs/editor/editor.main"], function () {
+            // Editor initialized in main.js
+            window.dispatchEvent(new Event('monacoReady'));
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>
