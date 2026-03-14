@@ -30,9 +30,9 @@ def add_question():
     if session.get('role') != 'admin':
         return "Access denied", 403
 
-    if request.method == 'GET':
-        return render_template('add_question.html')
-    
+    conn = get_db_connection()
+    success = False
+
     if request.method == 'POST':
         title = request.form.get('title')
         description = request.form.get('description')
@@ -40,9 +40,9 @@ def add_question():
         
         # Validation
         if not title or not description or not difficulty:
+            conn.close()
             return "Missing mandatory fields", 400
             
-        conn = get_db_connection()
         cursor = conn.cursor()
         
         # 1. Insert Question
@@ -74,9 +74,101 @@ def add_question():
                 ''', (question_id, in_val, out_val, False))
                 
         conn.commit()
-        conn.close()
+        success = True
         
-        return render_template('add_question.html', success=True)
+    questions = conn.execute('SELECT * FROM questions ORDER BY id DESC').fetchall()
+    conn.close()
+    
+    return render_template('add_question.html', success=success, questions=questions)
+
+@app.route('/edit-question/<int:id>', methods=['GET', 'POST'])
+def edit_question(id):
+    if session.get('role') != 'admin':
+        return "Access denied", 403
+
+    conn = get_db_connection()
+
+    if request.method == 'POST':
+        title = request.form.get('title')
+        description = request.form.get('description')
+        difficulty = request.form.get('difficulty')
+        
+        if not title or not description or not difficulty:
+            conn.close()
+            return "Missing mandatory fields", 400
+            
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE questions
+            SET title=?, description=?, difficulty=?
+            WHERE id=?
+        ''', (title, description, difficulty, id))
+        
+        cursor.execute('DELETE FROM test_cases WHERE question_id=?', (id,))
+        
+        # 2. Insert Sample Test Cases (2)
+        for i in range(1, 3):
+            in_val = request.form.get(f'sample_in_{i}')
+            out_val = request.form.get(f'sample_out_{i}')
+            if in_val and out_val:
+                cursor.execute('''
+                    INSERT INTO test_cases (question_id, input, expected_output, is_sample)
+                    VALUES (?, ?, ?, ?)
+                ''', (id, in_val, out_val, True))
+                
+        # 3. Insert Hidden Test Cases (5)
+        for i in range(1, 6):
+            in_val = request.form.get(f'hidden_in_{i}')
+            out_val = request.form.get(f'hidden_out_{i}')
+            if in_val and out_val:
+                cursor.execute('''
+                    INSERT INTO test_cases (question_id, input, expected_output, is_sample)
+                    VALUES (?, ?, ?, ?)
+                ''', (id, in_val, out_val, False))
+                
+        conn.commit()
+        conn.close()
+        return redirect(url_for('add_question'))
+        
+    question = conn.execute('SELECT * FROM questions WHERE id = ?', (id,)).fetchone()
+    if not question:
+        conn.close()
+        return "Question not found", 404
+        
+    test_cases = conn.execute('SELECT * FROM test_cases WHERE question_id = ?', (id,)).fetchall()
+    conn.close()
+    
+    sample_cases = [tc for tc in test_cases if tc['is_sample']]
+    hidden_cases = [tc for tc in test_cases if not tc['is_sample']]
+    
+    # Pad cases so the form always has 2 sample and 5 hidden inputs
+    while len(sample_cases) < 2:
+        sample_cases.append({'input': '', 'expected_output': ''})
+    while len(hidden_cases) < 5:
+        hidden_cases.append({'input': '', 'expected_output': ''})
+        
+    return render_template('edit_question.html', question=question, sample_cases=sample_cases, hidden_cases=hidden_cases)
+
+@app.route('/delete-question/<int:id>', methods=['POST'])
+def delete_question(id):
+    if session.get('role') != 'admin':
+        return "Access denied", 403
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Check if question exists
+    question = cursor.execute('SELECT id FROM questions WHERE id = ?', (id,)).fetchone()
+    if not question:
+        conn.close()
+        return "Question not found", 404
+        
+    cursor.execute('DELETE FROM test_cases WHERE question_id=?', (id,))
+    cursor.execute('DELETE FROM questions WHERE id=?', (id,))
+    conn.commit()
+    conn.close()
+    
+    return redirect(url_for('add_question'))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -152,10 +244,21 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+@app.route('/api/questions')
+def get_all_questions():
+    conn = get_db_connection()
+    questions = conn.execute('SELECT id, title, difficulty FROM questions ORDER BY id ASC').fetchall()
+    conn.close()
+    return jsonify([{"id": q["id"], "title": q["title"], "difficulty": q["difficulty"]} for q in questions])
+
 @app.route('/api/question')
 def get_question():
     conn = get_db_connection()
-    question = conn.execute('SELECT * FROM questions ORDER BY RANDOM() LIMIT 1').fetchone()
+    question_id = request.args.get('id', type=int)
+    if question_id:
+        question = conn.execute('SELECT * FROM questions WHERE id = ?', (question_id,)).fetchone()
+    else:
+        question = conn.execute('SELECT * FROM questions ORDER BY RANDOM() LIMIT 1').fetchone()
     if not question:
         return jsonify({"error": "No questions found"}), 404
     
@@ -173,37 +276,82 @@ def get_question():
         "hidden_test_cases_count": hidden_count
     })
 
-def execute_code(code, input_data):
-    temp_file = 'temp_code.py'
-    with open(temp_file, 'w') as f:
-        f.write(code)
-    
-    try:
-        result = subprocess.run(
-            ['python', temp_file],
-            input=input_data,
-            text=True,
-            capture_output=True,
-            timeout=3
-        )
-        if result.returncode != 0:
-            return {"error": result.stderr}
-        return {"output": result.stdout}
-    except subprocess.TimeoutExpired:
-        return {"error": "Execution Timeout (3s limit)"}
-    except Exception as e:
-        return {"error": str(e)}
-    finally:
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
+def execute_code(code, input_data, language='python'):
+    if language == 'cpp':
+        temp_file = 'temp_code.cpp'
+        exe_file = 'temp_code.exe' if os.name == 'nt' else './temp_code.out'
+        with open(temp_file, 'w') as f:
+            f.write(code)
+        
+        # Check if g++ is in C:\TDM-GCC-64\bin\g++.exe
+        gpp_cmd = 'g++'
+        if os.name == 'nt' and os.path.exists(r'C:\TDM-GCC-64\bin\g++.exe'):
+            gpp_cmd = r'C:\TDM-GCC-64\bin\g++.exe'
+        
+        try:
+            compile_result = subprocess.run(
+                [gpp_cmd, temp_file, '-o', exe_file.replace('./', '')],
+                capture_output=True,
+                text=True
+            )
+            if compile_result.returncode != 0:
+                return {"error": "Compilation Error:\n" + compile_result.stderr}
+            
+            run_cmd = [exe_file.replace('./', '')] if os.name == 'nt' else [exe_file]
+            result = subprocess.run(
+                run_cmd,
+                input=input_data,
+                text=True,
+                capture_output=True,
+                timeout=3
+            )
+            if result.returncode != 0:
+                return {"error": result.stderr}
+            return {"output": result.stdout}
+        except subprocess.TimeoutExpired:
+            return {"error": "Execution Timeout (3s limit)"}
+        except FileNotFoundError:
+            return {"error": "C++ Compiler (g++) not found. Please install MinGW/g++ and add it to your system PATH."}
+        except Exception as e:
+            return {"error": str(e)}
+        finally:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+            exe_to_remove = exe_file.replace('./', '')
+            if os.path.exists(exe_to_remove):
+                os.remove(exe_to_remove)
+    else:
+        temp_file = 'temp_code.py'
+        with open(temp_file, 'w') as f:
+            f.write(code)
+        
+        try:
+            result = subprocess.run(
+                ['python', temp_file],
+                input=input_data,
+                text=True,
+                capture_output=True,
+                timeout=3
+            )
+            if result.returncode != 0:
+                return {"error": result.stderr}
+            return {"output": result.stdout}
+        except subprocess.TimeoutExpired:
+            return {"error": "Execution Timeout (3s limit)"}
+        except Exception as e:
+            return {"error": str(e)}
+        finally:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
 
 @app.route('/api/run', methods=['POST'])
 def run_code():
     data = request.json
     code = data.get('code', '')
     custom_input = data.get('custom_input', '')
+    language = data.get('language', 'python')
     
-    result = execute_code(code, custom_input)
+    result = execute_code(code, custom_input, language)
     return jsonify(result)
 
 @app.route('/api/submit', methods=['POST'])
@@ -211,6 +359,7 @@ def submit_code():
     data = request.json
     code = data.get('code', '')
     question_id = data.get('question_id')
+    language = data.get('language', 'python')
     
     conn = get_db_connection()
     test_cases = conn.execute('SELECT * FROM test_cases WHERE question_id = ?', (question_id,)).fetchall()
@@ -218,15 +367,22 @@ def submit_code():
     results = []
     
     for tc in test_cases:
-        res = execute_code(code, tc["input"])
+        test_input = tc["input"].replace('\\n', '\n') if tc["input"] else ""
+        res = execute_code(code, test_input, language)
         is_pass = False
         actual_output = None
         error_msg = res.get("error")
         
         if "output" in res:
-            actual_output = res["output"].strip()
-            expected = tc["expected_output"].strip() if tc["expected_output"] else ""
-            if actual_output == expected:
+            # Replace literal '\\n' with actual newline for comparison
+            actual_output = res["output"]
+            expected = tc["expected_output"].replace('\\n', '\n') if tc["expected_output"] else ""
+            
+            # Normalize strings by stripping trailing/leading whitespace from each line
+            actual_lines = [line.strip() for line in actual_output.strip().splitlines()]
+            expected_lines = [line.strip() for line in expected.strip().splitlines()]
+            
+            if actual_lines == expected_lines:
                 is_pass = True
         
         results.append({

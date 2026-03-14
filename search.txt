@@ -1,0 +1,9 @@
+﻿Name                                 Id                                   Version                 Match          Source
+-----------------------------------------------------------------------------------------------------------------------
+WinLibs (MCF threads, UCRT runtime)  BrechtSanders.WinLibs.MCF.UCRT       15.1.0-12.0.0-r1        Tag: mingw-w64 winget
+WinLibs (POSIX threads, MSVCRT runtΓÇª BrechtSanders.WinLibs.POSIX.MSVCRT   15.2.0-13.0.0-r6        Tag: mingw-w64 winget
+WinLibs (POSIX threads, MSVCRT runtΓÇª BrechtSanders.WinLibs.POSIX.MSVCRT.ΓÇª 14.2.0-19.1.7-12.0.0-r3 Tag: mingw-w64 winget
+WinLibs (POSIX threads, UCRT runtimΓÇª BrechtSanders.WinLibs.POSIX.UCRT     15.2.0-13.0.0-r6        Tag: mingw-w64 winget
+WinLibs (POSIX threads, UCRT runtimΓÇª BrechtSanders.WinLibs.POSIX.UCRT.LLΓÇª 14.2.0-19.1.1-12.0.0-r2 Tag: mingw-w64 winget
+LLVM MinGW (MSVCRT runtime)          MartinStorsjo.LLVM-MinGW.MSVCRT      22.1.1-20260311         Tag: mingw-w64 winget
+LLVM MinGW (UCRT runtime)            MartinStorsjo.LLVM-MinGW.UCRT        22.1.1-20260311         Tag: mingw-w64 winget

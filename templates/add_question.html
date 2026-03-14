@@ -60,6 +60,10 @@
             resize: vertical;
         }
 
+        textarea.test-case-input {
+            min-height: 60px;
+        }
+
         .section-title {
             margin-top: 40px;
             margin-bottom: 16px;
@@ -159,11 +163,13 @@
             <div class="test-case-row">
                 <div>
                     <label>Sample Input {{i}} *</label>
-                    <input type="text" name="sample_in_{{i}}" class="form-control" required placeholder="Input...">
+                    <textarea name="sample_in_{{i}}" class="form-control test-case-input" required
+                        placeholder="Input..."></textarea>
                 </div>
                 <div>
                     <label>Sample Output {{i}} *</label>
-                    <input type="text" name="sample_out_{{i}}" class="form-control" required placeholder="Output...">
+                    <textarea name="sample_out_{{i}}" class="form-control test-case-input" required
+                        placeholder="Output..."></textarea>
                 </div>
             </div>
             {% endfor %}
@@ -176,11 +182,13 @@
             <div class="test-case-row">
                 <div>
                     <label>Hidden Input {{i}} *</label>
-                    <input type="text" name="hidden_in_{{i}}" class="form-control" required placeholder="Input...">
+                    <textarea name="hidden_in_{{i}}" class="form-control test-case-input" required
+                        placeholder="Input..."></textarea>
                 </div>
                 <div>
                     <label>Hidden Output {{i}} *</label>
-                    <input type="text" name="hidden_out_{{i}}" class="form-control" required placeholder="Output...">
+                    <textarea name="hidden_out_{{i}}" class="form-control test-case-input" required
+                        placeholder="Output..."></textarea>
                 </div>
             </div>
             {% endfor %}
@@ -188,6 +196,78 @@
             <button type="submit" class="btn btn-primary submit-btn"><i class="fa-solid fa-floppy-disk"></i> Submit &
                 Save to Database</button>
         </form>
+
+        <h3 class="section-title"><i class="fa-solid fa-list"></i> Existing Questions</h3>
+        <div style="overflow-x: auto;">
+            <table
+                style="width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; text-align: left; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--border-color); overflow: hidden;">
+                <thead>
+                    <tr style="background: rgba(255,255,255,0.03);">
+                        <th
+                            style="padding: 16px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+                            ID</th>
+                        <th
+                            style="padding: 16px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+                            Title</th>
+                        <th
+                            style="padding: 16px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+                            Difficulty</th>
+                        <th
+                            style="padding: 16px; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-color);">
+                            Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for q in questions %}
+                    <tr style="transition: background 0.2s;"
+                        onmouseover="this.style.background='rgba(255, 255, 255, 0.05)'"
+                        onmouseout="this.style.background='transparent'">
+                        <td
+                            style="padding: 16px; color: var(--text-secondary); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            {{ q.id }}</td>
+                        <td style="padding: 16px; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.05);">{{
+                            q.title }}</td>
+                        <td style="padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            {% if q.difficulty == 'Easy' %}
+                            <span
+                                style="color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 4px 10px; border-radius: 4px; font-size: 0.85rem;"><i
+                                    class="fa-solid fa-seedling" style="margin-right:4px;"></i>Easy</span>
+                            {% elif q.difficulty == 'Medium' %}
+                            <span
+                                style="color: #f59e0b; background: rgba(245, 158, 11, 0.1); padding: 4px 10px; border-radius: 4px; font-size: 0.85rem;"><i
+                                    class="fa-solid fa-code" style="margin-right:4px;"></i>Medium</span>
+                            {% else %}
+                            <span
+                                style="color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 4px 10px; border-radius: 4px; font-size: 0.85rem;"><i
+                                    class="fa-solid fa-fire" style="margin-right:4px;"></i>Hard</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <div style="display: flex; gap: 8px;">
+                                <a href="/edit-question/{{ q.id }}" class="btn"
+                                    style="background: rgba(255,255,255,0.1); padding: 6px 12px; text-decoration: none; border-radius: 4px; font-size: 0.9rem;"><i
+                                        class="fa-solid fa-pen"></i> Edit</a>
+                                <form action="/delete-question/{{ q.id }}" method="post" style="margin: 0;"
+                                    onsubmit="return confirm('Are you sure you want to delete this question and all its test cases?');">
+                                    <button type="submit" class="btn"
+                                        style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 12px; border-radius: 4px; font-size: 0.9rem; cursor: pointer; transition: 0.2s;"><i
+                                            class="fa-solid fa-trash"></i> Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" style="padding: 32px; text-align: center; color: var(--text-secondary);">
+                            <i class="fa-solid fa-box-open"
+                                style="font-size: 2rem; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
+                            No questions found in the database.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </body>
 

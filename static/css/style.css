@@ -196,6 +196,7 @@ body {
     display: block;
     margin-bottom: 12px;
     color: var(--text-secondary);
+    white-space: pre-wrap;
 }
 
 .sample-case span:last-child {
@@ -433,6 +434,175 @@ textarea#customInput:focus {
 }
 
 .r-status.fail {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--danger-color);
+}
+
+/* ─── Question Search Bar ───────────────────────────────── */
+.question-search-wrapper {
+    position: relative;
+    flex: 0 1 340px;
+    margin: 0 16px;
+}
+
+.question-search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px 12px;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: text;
+}
+
+.question-search-box:focus-within {
+    border-color: var(--accent-color);
+    background: rgba(99, 102, 241, 0.08);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.search-icon {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+#questionSearchInput {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    font-size: 0.9rem;
+    flex: 1;
+    min-width: 0;
+}
+
+#questionSearchInput::placeholder {
+    color: var(--text-secondary);
+}
+
+.search-shortcut {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 1px 5px;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    letter-spacing: 0.03em;
+}
+
+.question-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    overflow: hidden;
+    max-height: 320px;
+    overflow-y: auto;
+    animation: dropdownFadeIn 0.15s ease;
+}
+
+.question-dropdown.open {
+    display: block;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dropdown-loading,
+.dropdown-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+#questionList {
+    list-style: none;
+    padding: 6px 0;
+}
+
+#questionList li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    cursor: pointer;
+    gap: 10px;
+    transition: background 0.15s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+#questionList li:last-child {
+    border-bottom: none;
+}
+
+#questionList li:hover {
+    background: rgba(99, 102, 241, 0.12);
+}
+
+.q-title {
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.q-id {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+}
+
+.q-diff {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.q-diff.easy {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success-color);
+}
+
+.q-diff.medium {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--accent-color);
+}
+
+.q-diff.hard {
     background: rgba(239, 68, 68, 0.15);
     color: var(--danger-color);
 }

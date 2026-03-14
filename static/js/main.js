@@ -1,5 +1,6 @@
 let editor;
 let currentQuestionId = null;
+let currentSampleCases = [];
 
 // Initialize layout resizer
 const resizer = document.getElementById('dragMe');
@@ -30,10 +31,9 @@ document.addEventListener('mouseup', () => {
     document.body.style.cursor = 'default';
 });
 
-// Monaco setup
-window.addEventListener('monacoReady', () => {
-    editor = monaco.editor.create(document.getElementById('editorContainer'), {
-        value: `# Write your python code here
+// Default codes
+const defaultCode = {
+    'python': `# Write your python code here
 import sys
 
 def main():
@@ -45,6 +45,28 @@ def main():
 
 if __name__ == "__main__":
     main()`,
+    'cpp': `// Write your C++ code here
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+int main() {
+    string input_data;
+    if (cin >> input_data) {
+        cout << "Hello " << input_data << endl;
+    } else {
+        cout << "Hello " << endl;
+    }
+    return 0;
+}
+`
+};
+
+// Monaco setup
+window.addEventListener('monacoReady', () => {
+    editor = monaco.editor.create(document.getElementById('editorContainer'), {
+        value: defaultCode['python'],
         language: 'python',
         theme: 'vs-dark',
         automaticLayout: true,
@@ -57,6 +79,24 @@ if __name__ == "__main__":
         roundedSelection: false,
         padding: { top: 16, bottom: 16 }
     });
+    
+    const languageSelect = document.getElementById('languageSelect');
+    if (languageSelect) {
+        languageSelect.addEventListener('change', (e) => {
+            const lang = e.target.value;
+            monaco.editor.setModelLanguage(editor.getModel(), lang);
+            editor.setValue(defaultCode[lang]);
+        });
+    }
+    
+    // Add reset button functionality
+    const resetBtn = document.getElementById('resetCodeBtn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            const lang = languageSelect ? languageSelect.value : 'python';
+            editor.setValue(defaultCode[lang]);
+        });
+    }
 });
 
 // UI Tabs Logic
@@ -77,45 +117,66 @@ function switchToTab(tabId) {
     document.querySelector(`.tab[data-tab="${tabId}"]`).click();
 }
 
-// Fetch Question Data
-async function fetchQuestion() {
+// Fetch a specific question by ID
+async function fetchQuestionById(id) {
     try {
-        const res = await fetch('/api/question');
+        const res = await fetch(`/api/question?id=${id}`);
         const data = await res.json();
-
         if (data.error) {
             document.getElementById('questionTitle').textContent = 'Error loading question';
             return;
         }
+        loadQuestionData(data);
+    } catch (err) {
+        console.error('Failed to fetch question by id:', err);
+    }
+}
 
-        currentQuestionId = data.id;
-        document.getElementById('questionTitle').textContent = data.title;
-        document.getElementById('questionDescription').innerHTML = `<p>${data.description.replace(/\\n/g, '<br>')}</p>`;
+// Load question data into the UI
+function loadQuestionData(data) {
+    currentQuestionId = data.id;
+    currentSampleCases = data.sample_test_cases;
+    document.getElementById('questionTitle').textContent = data.title;
+    const descHtml = data.description.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+    document.getElementById('questionDescription').innerHTML = `<p>${descHtml}</p>`;
 
-        const difficultyBadge = document.getElementById('difficultyBadge');
-        difficultyBadge.textContent = data.difficulty;
-        difficultyBadge.className = `difficulty ${data.difficulty.toLowerCase()}`;
+    const difficultyBadge = document.getElementById('difficultyBadge');
+    difficultyBadge.textContent = data.difficulty;
+    difficultyBadge.className = `difficulty ${data.difficulty.toLowerCase()}`;
 
-        // Populate sample test cases
-        const sampleContainer = document.getElementById('sampleTestCases');
-        // Clear skeletons / placeholders
-        sampleContainer.innerHTML = '';
+    const sampleContainer = document.getElementById('sampleTestCases');
+    sampleContainer.innerHTML = '';
 
-        data.sample_test_cases.forEach((tc, idx) => {
-            const div = document.createElement('div');
-            div.className = 'sample-case';
-            div.innerHTML = `
-                <strong>Input:</strong>
-                <span>${tc.input}</span>
-                <strong>Output:</strong>
-                <span>${tc.expected_output}</span>
-            `;
-            sampleContainer.appendChild(div);
-        });
+    data.sample_test_cases.forEach((tc) => {
+        const div = document.createElement('div');
+        div.className = 'sample-case';
+        const inputStr = tc.input || '';
+        const outputStr = tc.expected_output || '';
+        const formattedInput = inputStr.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+        const formattedOutput = outputStr.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+        div.innerHTML = `
+            <strong>Input:</strong>
+            <span>${formattedInput}</span>
+            <strong>Output:</strong>
+            <span>${formattedOutput}</span>
+        `;
+        sampleContainer.appendChild(div);
+    });
 
-        document.getElementById('hiddenCasesLabel').textContent = `Hidden Test Cases (${data.hidden_test_cases_count} cases)`;
-        document.getElementById('testResultsSection').style.display = 'none';
+    document.getElementById('hiddenCasesLabel').textContent = `Hidden Test Cases (${data.hidden_test_cases_count} cases)`;
+    document.getElementById('testResultsSection').style.display = 'none';
+}
 
+// Fetch Question Data (random)
+async function fetchQuestion() {
+    try {
+        const res = await fetch('/api/question');
+        const data = await res.json();
+        if (data.error) {
+            document.getElementById('questionTitle').textContent = 'Error loading question';
+            return;
+        }
+        loadQuestionData(data);
     } catch (err) {
         console.error('Failed to fetch question:', err);
     }
@@ -131,16 +192,29 @@ runBtn.addEventListener('click', async () => {
     if (!editor) return;
 
     const code = editor.getValue();
-    const customInput = document.getElementById('customInput').value;
+    let customInput = document.getElementById('customInput').value;
+
+    // Auto-fill random sample test case if input is empty
+    if (!customInput || customInput.trim() === '') {
+        if (currentSampleCases && currentSampleCases.length > 0) {
+            const randomCase = currentSampleCases[Math.floor(Math.random() * currentSampleCases.length)];
+            // Replace '\\n' from DB literal back to actual newline for input box
+            customInput = randomCase.input ? randomCase.input.replace(/\\n/g, '\n') : '';
+            document.getElementById('customInput').value = customInput;
+        }
+    }
 
     switchToTab('custom-out');
     outputDisplay.innerHTML = '<span class="placeholder">Executing code... <i class="fa-solid fa-circle-notch fa-spin"></i></span>';
+
+    const languageSelect = document.getElementById('languageSelect');
+    const language = languageSelect ? languageSelect.value : 'python';
 
     try {
         const res = await fetch('/api/run', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, custom_input: customInput })
+            body: JSON.stringify({ code, custom_input: customInput, language })
         });
         const data = await res.json();
 
@@ -169,11 +243,14 @@ submitBtn.addEventListener('click', async () => {
     resultsContainer.innerHTML = '<div class="placeholder" style="padding: 12px;">Running test cases... <i class="fa-solid fa-circle-notch fa-spin"></i></div>';
 
 
+    const languageSelect = document.getElementById('languageSelect');
+    const language = languageSelect ? languageSelect.value : 'python';
+
     try {
         const res = await fetch('/api/submit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, question_id: currentQuestionId })
+            body: JSON.stringify({ code, question_id: currentQuestionId, language })
         });
         const data = await res.json();
 
@@ -202,5 +279,94 @@ submitBtn.addEventListener('click', async () => {
     }
 });
 
+// ─── Search Bar Logic ────────────────────────────────────
+let allQuestions = [];
+
+async function initSearchBar() {
+    try {
+        const res = await fetch('/api/questions');
+        allQuestions = await res.json();
+        document.getElementById('dropdownLoading').style.display = 'none';
+        renderDropdown('');
+    } catch (e) {
+        console.error('Failed to load questions for search:', e);
+    }
+}
+
+function renderDropdown(query) {
+    const ul = document.getElementById('questionList');
+    const emptyMsg = document.getElementById('dropdownEmpty');
+    const q = query.toLowerCase().trim();
+    const filtered = q
+        ? allQuestions.filter(qn => qn.title.toLowerCase().includes(q))
+        : allQuestions;
+
+    ul.innerHTML = '';
+    if (filtered.length === 0) {
+        emptyMsg.style.display = 'flex';
+        return;
+    }
+    emptyMsg.style.display = 'none';
+
+    filtered.forEach(qn => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <span class="q-id">#${qn.id}</span>
+            <span class="q-title">${qn.title}</span>
+            <span class="q-diff ${qn.difficulty.toLowerCase()}">${qn.difficulty}</span>
+        `;
+        li.addEventListener('click', () => {
+            closeDropdown();
+            document.getElementById('questionSearchInput').value = '';
+            fetchQuestionById(qn.id);
+        });
+        ul.appendChild(li);
+    });
+}
+
+function openDropdown() {
+    document.getElementById('questionDropdown').classList.add('open');
+}
+
+function closeDropdown() {
+    document.getElementById('questionDropdown').classList.remove('open');
+}
+
+const searchInput = document.getElementById('questionSearchInput');
+
+searchInput.addEventListener('focus', () => {
+    openDropdown();
+    renderDropdown(searchInput.value);
+});
+
+searchInput.addEventListener('input', () => {
+    openDropdown();
+    renderDropdown(searchInput.value);
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    const wrapper = document.getElementById('questionSearchWrapper');
+    if (!wrapper.contains(e.target)) {
+        closeDropdown();
+    }
+});
+
+// Keyboard shortcut: Ctrl+K / Cmd+K to focus search
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInput.focus();
+        openDropdown();
+    }
+    if (e.key === 'Escape') {
+        closeDropdown();
+        searchInput.blur();
+    }
+});
+
 // Load question on startup
-document.addEventListener('DOMContentLoaded', fetchQuestion);
+document.addEventListener('DOMContentLoaded', () => {
+    fetchQuestion();
+    initSearchBar();
+});

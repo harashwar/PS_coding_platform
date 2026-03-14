@@ -17,6 +17,25 @@
         <div class="logo">
             <i class="fa-solid fa-code"></i> Code Arena <span class="badge">PRO</span>
         </div>
+        <!-- Question Search Bar -->
+        <div class="question-search-wrapper" id="questionSearchWrapper">
+            <div class="question-search-box">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="questionSearchInput" placeholder="Search questions..." autocomplete="off"
+                    spellcheck="false">
+                <span class="search-shortcut">⌘K</span>
+            </div>
+            <div class="question-dropdown" id="questionDropdown">
+                <div class="dropdown-loading" id="dropdownLoading">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Loading questions...
+                </div>
+                <ul id="questionList"></ul>
+                <div class="dropdown-empty" id="dropdownEmpty" style="display:none;">
+                    <i class="fa-solid fa-face-frown"></i> No questions found
+                </div>
+            </div>
+        </div>
+
         <div class="nav-links" style="display: flex; gap: 12px; align-items: center;">
             <button class="theme-toggle" id="themeToggle">
                 <i class="fa-solid fa-moon"></i>
@@ -71,7 +90,10 @@
         <div class="panel right-panel">
             <div class="editor-header">
                 <div class="lang-selector">
-                    <i class="fa-brands fa-python"></i> Python 3
+                    <select id="languageSelect" class="lang-dropdown" style="background: transparent; color: inherit; border: none; font-family: inherit; font-size: inherit; cursor: pointer; outline: none;">
+                        <option value="python" style="color: black;">Python 3</option>
+                        <option value="cpp" style="color: black;">C++ (g++)</option>
+                    </select>
                 </div>
                 <div class="editor-actions">
                     <button id="resetCodeBtn" class="btn btn-icon" title="Reset Code"><i
